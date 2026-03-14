@@ -1,29 +1,67 @@
 import 'package:flutter/material.dart';
+import 'package:provider/models/cart_item.dart';
+import 'package:provider/models/products.dart';
 import 'package:provider/screens/cart_screen.dart';
 
 import '../data/dummy_products.dart';
 import '../widgets/cart_badge_icon.dart';
 import '../widgets/product_card.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final List<CartItem> _cartItems = [];
+
+  int get _cartItemCount {
+    return _cartItems.fold(0, (sum, item) => sum + item.quantity);
+  }
+
+  void _addToCart(Product product) {
+    setState(() {
+      final existingIndex = _cartItems.indexWhere(
+        (item) => item.product.id == product.id,
+      );
+
+      if (existingIndex >= 0) {
+        _cartItems[existingIndex] = _cartItems[existingIndex].copyWith(
+          quantity: _cartItems[existingIndex].quantity + 1,
+        );
+      } else {
+        _cartItems.add(CartItem(product: product, quantity: 1));
+      }
+    });
+  }
+
+  void _clearCart() {
+    setState(() {
+      _cartItems.clear();
+    });
+  }
+
+  void _openCart() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CartScreen(
+          cartItems: List.unmodifiable(_cartItems),
+          onPurchaseComplete: _clearCart,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('GadgetStore'),
         actions: [
-          CartBadgeIcon(
-            itemCount: 0, 
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CartScreen()),
-              );
-            },
-          ),
+          CartBadgeIcon(itemCount: _cartItemCount, onPressed: _openCart),
           const SizedBox(width: 8),
         ],
       ),
@@ -35,13 +73,10 @@ class HomeScreen extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: Text(
               'Featured Gadgets',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
           ),
- 
+
           // --- Product Grid ---
           Expanded(
             child: Padding(
@@ -58,7 +93,7 @@ class HomeScreen extends StatelessWidget {
                   final product = dummyProducts[index];
                   return ProductCard(
                     product: product,
-                    onAddToCart: null,
+                    onAddToCart: () => _addToCart(product),
                   );
                 },
               ),
